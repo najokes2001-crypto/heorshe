@@ -170,6 +170,11 @@
             border-radius: 50%;
             object-fit: cover;
             border: 2px solid #6a11cb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            background: #e0e0ff;
         }
         
         .guest-name {
@@ -195,9 +200,35 @@
             margin-top: 15px;
             padding-top: 15px;
             border-top: 2px dashed #ddd;
+        }
+        
+        .couple-answers {
             display: flex;
-            gap: 10px;
+            gap: 15px;
+            margin-bottom: 15px;
             flex-wrap: wrap;
+        }
+        
+        .groom-answer, .bride-answer {
+            flex: 1;
+            min-width: 200px;
+            padding: 15px;
+            border-radius: 8px;
+            background: #f0f8ff;
+            text-align: center;
+        }
+        
+        .bride-answer {
+            background: #fff0f5;
+        }
+        
+        .answer-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
         
         .answer-btn {
@@ -206,22 +237,40 @@
             font-size: 16px;
             width: auto;
             border-radius: 30px;
+            margin: 5px;
         }
         
         .answer-btn.she {
             background: linear-gradient(135deg, #ff6b9d, #ff8eb4);
         }
         
-        .answer-text {
-            margin-top: 10px;
+        .answer-result {
             font-weight: bold;
-            color: #198754;
             font-size: 18px;
-            padding: 10px;
+            margin-top: 10px;
+            min-height: 28px;
+        }
+        
+        .final-answer {
+            margin-top: 15px;
+            padding: 15px;
             background: #e8f5e9;
             border-radius: 8px;
             text-align: center;
+            font-weight: bold;
+            color: #198754;
+            font-size: 18px;
             animation: popIn 0.5s ease;
+            display: none;
+        }
+        
+        .reveal-btn {
+            background: linear-gradient(135deg, #34a853, #56b874);
+            margin-top: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            width: auto;
+            border-radius: 30px;
         }
         
         .timestamp {
@@ -287,6 +336,10 @@
             
             h1 {
                 font-size: 2rem;
+            }
+            
+            .couple-answers {
+                flex-direction: column;
             }
         }
     </style>
@@ -394,7 +447,9 @@
                 guestStatus: guest.status,
                 guestAvatar: guest.avatar,
                 question: questionText,
-                answer: null,
+                groomAnswer: null,
+                brideAnswer: null,
+                finalAnswer: null,
                 timestamp: new Date().toLocaleString('ru-RU')
             };
             
@@ -427,7 +482,7 @@
                 questionsHTML += `
                     <div class="question-item">
                         <div class="guest-info">
-                            <div class="guest-avatar" style="background: #e0e0ff; display: flex; align-items: center; justify-content: center; font-size: 24px;">
+                            <div class="guest-avatar">
                                 ${guest?.avatar || '👤'}
                             </div>
                             <div>
@@ -439,10 +494,37 @@
                         <div class="question-text">"${q.question}"</div>
                         
                         <div class="answer-section">
-                            ${q.answer ? 
-                                `<div class="answer-text">Ответ молодоженов: ${q.answer}</div>` : 
-                                `<button class="answer-btn" onclick="answerQuestion(${q.id}, 'ОН')"><i class="fas fa-male"></i> ОН</button>
-                                 <button class="answer-btn she" onclick="answerQuestion(${q.id}, 'ОНА')"><i class="fas fa-female"></i> ОНА</button>`
+                            <div class="couple-answers">
+                                <div class="groom-answer">
+                                    <div class="answer-title"><i class="fas fa-male"></i> Ответ жениха</div>
+                                    ${q.groomAnswer ? 
+                                        `<div class="answer-result">${q.groomAnswer}</div>` : 
+                                        `<button class="answer-btn" onclick="answerQuestion(${q.id}, 'groom', 'ОН')">ОН</button>
+                                         <button class="answer-btn" onclick="answerQuestion(${q.id}, 'groom', 'ОНА')">ОНА</button>`
+                                    }
+                                </div>
+                                
+                                <div class="bride-answer">
+                                    <div class="answer-title"><i class="fas fa-female"></i> Ответ невесты</div>
+                                    ${q.brideAnswer ? 
+                                        `<div class="answer-result">${q.brideAnswer}</div>` : 
+                                        `<button class="answer-btn she" onclick="answerQuestion(${q.id}, 'bride', 'ОН')">ОН</button>
+                                         <button class="answer-btn she" onclick="answerQuestion(${q.id}, 'bride', 'ОНА')">ОНА</button>`
+                                    }
+                                </div>
+                            </div>
+                            
+                            ${q.groomAnswer && q.brideAnswer ? 
+                                `<div class="final-answer" id="finalAnswer-${q.id}">
+                                    ${q.groomAnswer === q.brideAnswer ? 
+                                        `Единодушный ответ: ${q.groomAnswer}! <i class="fas fa-smile"></i>` : 
+                                        `Разные ответы! Жених: ${q.groomAnswer}, Невеста: ${q.brideAnswer}`
+                                    }
+                                </div>
+                                <button class="reveal-btn" onclick="revealAnswer(${q.id})">
+                                    <i class="fas fa-star"></i> Показать ответ
+                                </button>` : 
+                                ''
                             }
                         </div>
                         
@@ -454,17 +536,32 @@
             container.innerHTML = questionsHTML;
         }
         
-        // Ответ на вопрос (функция для организаторов)
-        function answerQuestion(questionId, answer) {
-            // В реальном сценарии здесь должна быть проверка прав доступа
-            // что отвечают именно жених или невеста
-            
+        // Ответ на вопрос (отдельно для жениха и невесты)
+        function answerQuestion(questionId, person, answer) {
             const question = questions.find(q => q.id === questionId);
             if (question) {
-                question.answer = answer;
+                if (person === 'groom') {
+                    question.groomAnswer = answer;
+                } else {
+                    question.brideAnswer = answer;
+                }
+                
                 saveQuestions();
                 displayQuestions();
-                createConfetti(15);
+                
+                // Если ответили оба, создаем конфетти
+                if (question.groomAnswer && question.brideAnswer) {
+                    createConfetti(15);
+                }
+            }
+        }
+        
+        // Раскрытие ответа
+        function revealAnswer(questionId) {
+            const finalAnswerEl = document.getElementById(`finalAnswer-${questionId}`);
+            if (finalAnswerEl) {
+                finalAnswerEl.style.display = 'block';
+                createConfetti(10);
             }
         }
         
