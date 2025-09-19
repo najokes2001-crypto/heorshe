@@ -392,6 +392,19 @@
             color: white;
         }
         
+        .offline-message {
+            background: #ff9800;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 2000;
+            display: none;
+        }
+        
         @media (max-width: 768px) {
             h1 {
                 font-size: 32px;
@@ -443,6 +456,9 @@
 <body>
     <div class="sync-indicator" id="sync-indicator">🔄 Синхронизация...</div>
     <div class="connection-status connected" id="connection-status">✓ Подключено</div>
+    <div class="offline-message" id="offline-message">
+        <i class="fas fa-wifi"></i> Отсутствует подключение к интернету. Проверьте соединение.
+    </div>
     
     <div class="container">
         <div class='main' id="main-screen">
@@ -585,14 +601,15 @@
         let brideAnswer = null;
         
         // Инициализация Firebase
-       const firebaseConfig = {
-  apiKey: "AIzaSyCTguMinuSwBPrV8-xzkvUM9YaO3lLeFeU",
-  authDomain: "wedding2025nastyushaproject.firebaseapp.com",
-  projectId: "wedding2025nastyushaproject",
-  storageBucket: "wedding2025nastyushaproject.firebasestorage.app",
-  messagingSenderId: "868560255743",
-  appId: "1:868560255743:web:2c7f6c723ba0fb915a6aca"
-};
+        const firebaseConfig = {
+            apiKey: "AIzaSyCTguMinuSwBPrV8-xzkvUM9YaO3lLeFeU",
+            authDomain: "wedding2025nastyushaproject.firebaseapp.com",
+            databaseURL: "https://wedding2025nastyushaproject-default-rtdb.firebaseio.com",
+            projectId: "wedding2025nastyushaproject",
+            storageBucket: "wedding2025nastyushaproject.firebasestorage.app",
+            messagingSenderId: "868560255743",
+            appId: "1:868560255743:web:2c7f6c723ba0fb915a6aca"
+        };
         
         // Инициализируем Firebase
         firebase.initializeApp(firebaseConfig);
@@ -610,12 +627,29 @@
                 guestSelect.append('<option value="' + i + '">' + guestNames[i] + ' - ' + guestStatuses[i] + '</option>');
             }
             
+            // Проверяем онлайн-статус
+            checkOnlineStatus();
+            window.addEventListener('online', checkOnlineStatus);
+            window.addEventListener('offline', checkOnlineStatus);
+            
             // Загружаем вопросы при загрузке страницы
             loadQuestions();
             
             // Слушаем изменения в базе данных в реальном времени
             setupRealtimeListener();
         });
+        
+        // Проверка онлайн-статуса
+        function checkOnlineStatus() {
+            if (navigator.onLine) {
+                $("#offline-message").hide();
+                $("#connection-status").removeClass("disconnected").addClass("connected").text("✓ Подключено");
+            } else {
+                $("#offline-message").show();
+                $("#connection-status").removeClass("connected").addClass("disconnected").text("✗ Offline");
+                showError("Отсутствует подключение к интернету. Проверьте соединение.");
+            }
+        }
         
         // Настраиваем прослушивание изменений в реальном времени
         function setupRealtimeListener() {
@@ -640,6 +674,11 @@
         
         // Функция для загрузки вопросов
         function loadQuestions() {
+            if (!navigator.onLine) {
+                showError("Нет подключения к интернету. Вопросы не могут быть загружены.");
+                return;
+            }
+            
             $("#sync-indicator").show();
             
             const questionsRef = database.ref('questions');
@@ -663,6 +702,11 @@
         
         // Функция для сохранения вопроса
         function saveQuestion(question) {
+            if (!navigator.onLine) {
+                showError("Нет подключения к интернету. Вопрос не может быть отправлен.");
+                return Promise.resolve(false);
+            }
+            
             $("#sync-indicator").show();
             
             const questionsRef = database.ref('questions');
@@ -690,6 +734,11 @@
         
         // Функция для очистки всех вопросов
         function clearAllQuestions() {
+            if (!navigator.onLine) {
+                showError("Нет подключения к интернету. Вопросы не могут быть удалены.");
+                return;
+            }
+            
             $("#sync-indicator").show();
             
             const questionsRef = database.ref('questions');
@@ -879,6 +928,8 @@
         
         // Пометить вопрос как отвеченный
         function markQuestionAsAnswered(index) {
+            if (!navigator.onLine) return;
+            
             if (questions[index] && questions[index].id) {
                 const questionId = questions[index].id;
                 const questionRef = database.ref('questions').orderByChild('id').equalTo(questionId);
@@ -939,8 +990,10 @@
         connectedRef.on("value", (snap) => {
             if (snap.val() === true) {
                 $("#connection-status").removeClass("disconnected").addClass("connected").text("✓ Подключено");
+                $("#offline-message").hide();
             } else {
                 $("#connection-status").removeClass("connected").addClass("disconnected").text("✗ Offline");
+                $("#offline-message").show();
             }
         });
     </script>
