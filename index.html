@@ -292,8 +292,8 @@
         }
         
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-           100% { transform: rotate(360deg); }
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
         
         .confetti {
@@ -308,8 +308,8 @@
         }
         
         @keyframes confettiFall {
-            0% { transform: translateY(-100px) rotate(0deg); opacity: 1; }
-           100% { transform: translateY(1000px) rotate(720deg); opacity: 0; }
+            from { transform: translateY(-100px) rotate(0deg); opacity: 1; }
+            to { transform: translateY(1000px) rotate(720deg); opacity: 0; }
         }
         
         .error-message {
@@ -453,31 +453,81 @@
         }
         
         .admin-panel {
-            background: #fce4ec;
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            z-index: 1000;
+        }
+        
+        .admin-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 152, 0, 0.1);
+            border: 1px solid rgba(255, 152, 0, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: #888;
+            font-size: 18px;
+        }
+        
+        .admin-icon:hover {
+            background: rgba(255, 152, 0, 0.2);
+            color: #ff9800;
+        }
+        
+        .admin-icon.admin-active {
+            background: rgba(255, 152, 0, 0.3);
+            color: #ff5722;
+            border-color: #ff5722;
+        }
+        
+        .admin-login-popup {
+            position: absolute;
+            top: 50px;
+            right: 0;
+            background: white;
             padding: 15px;
             border-radius: 10px;
-            margin: 15px 0;
-            border: 2px solid #e91e63;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            width: 250px;
+            display: none;
+            z-index: 1001;
+        }
+        
+        .admin-login-popup input {
+            margin: 8px 0;
+            padding: 8px;
+            font-size: 14px;
+        }
+        
+        .admin-login-popup button {
+            padding: 8px 15px;
+            font-size: 14px;
+            margin-top: 5px;
         }
         
         .admin-section {
             display: none;
-        }
-        
-        .password-input {
-            margin: 15px 0;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px dashed #ddd;
         }
         
         .role-badge {
             position: fixed;
-            top: 10px;
-            right: 10px;
-            background: #9c27b0;
+            top: 60px;
+            right: 15px;
+            background: rgba(156, 39, 176, 0.9);
             color: white;
-            padding: 5px 10px;
-            border-radius: 15px;
-            font-size: 14px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
             z-index: 1000;
+            display: none;
         }
         
         @media (max-width: 768px) {
@@ -507,6 +557,17 @@
                 width: 120px;
                 height: 120px;
             }
+            
+            .admin-panel {
+                top: 10px;
+                right: 10px;
+            }
+            
+            .admin-icon {
+                width: 35px;
+                height: 35px;
+                font-size: 16px;
+            }
         }
         
         @media (max-width: 480px) {
@@ -535,29 +596,40 @@
                 width: 100px;
                 height: 100px;
             }
+            
+            .admin-login-popup {
+                width: 220px;
+                right: -80px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="sync-indicator" id="sync-indicator">🔄 Синхронизация...</div>
     <div class="connection-status connected" id="connection-status">✓ Подключено</div>
-    <div class="role-badge" id="role-badge" style="display: none;">Гость</div>
+    <div class="role-badge" id="role-badge">Организатор</div>
     <div class="offline-message" id="offline-message">
         <i class="fas fa-wifi"></i> Отсутствует подключение к интернету. Проверьте соединение.
+    </div>
+    
+    <div class="admin-panel" id="admin-panel">
+        <div class="admin-icon" id="admin-icon" title="Доступ организатора">
+            <i class="fas fa-cog"></i>
+        </div>
+        <div class="admin-login-popup" id="admin-login-popup">
+            <h4 style="margin-bottom: 10px; color: #555;">Доступ организатора</h4>
+            <input type="password" id="admin-password" placeholder="Пароль" style="margin-bottom: 10px;">
+            <button class="secondary_button" id="login-admin" style="width: 100%;">Войти</button>
+            <div id="admin-logout" style="display: none; margin-top: 10px;">
+                <button class="secondary_button" id="logout-admin" style="width: 100%; background: #f44336;">Выйти</button>
+            </div>
+        </div>
     </div>
     
     <div class="container">
         <div class='main' id="main-screen">
             <h1>🎎 Он или Она? 🎎</h1>
             <h2>Веселая игра для вашей свадьбы</h2>
-            
-            <div class="admin-panel" id="admin-login">
-                <h3>Доступ организатора</h3>
-                <div class="password-input">
-                    <input type="password" id="admin-password" placeholder="Введите пароль организатора">
-                    <button class="secondary_button" id="login-admin">Войти</button>
-                </div>
-            </div>
             
             <div class="instructions">
                 <h3>Как играть:</h3>
@@ -749,6 +821,36 @@
                 guestSelect.append('<option value="' + i + '">' + guestNames[i] + ' - ' + guestStatuses[i] + '</option>');
             }
             
+            // Обработчики для админ-панели
+            $("#admin-icon").click(function(e) {
+                e.stopPropagation();
+                $("#admin-login-popup").toggle();
+            });
+            
+            $(document).click(function(e) {
+                if (!$(e.target).closest('#admin-panel').length) {
+                    $("#admin-login-popup").hide();
+                }
+            });
+            
+            $("#login-admin").click(function() {
+                const password = $("#admin-password").val();
+                if (password === ADMIN_PASSWORD) {
+                    setAdminRole();
+                    showSuccess("Вы вошли как организатор");
+                    $("#admin-password").val("");
+                    $("#admin-login-popup").hide();
+                } else {
+                    showError("Неверный пароль");
+                }
+            });
+            
+            $("#logout-admin").click(function() {
+                setGuestRole();
+                showSuccess("Вы вышли из режима организатора");
+                $("#admin-login-popup").hide();
+            });
+            
             // Проверяем онлайн-статус
             checkOnlineStatus();
             window.addEventListener('online', checkOnlineStatus);
@@ -779,8 +881,9 @@
         function setAdminRole() {
             userRole = "admin";
             $("#admin-section").show();
-            $("#admin-login").hide();
-            $("#role-badge").text("Организатор").show();
+            $("#admin-icon").addClass("admin-active");
+            $("#role-badge").show();
+            $("#admin-logout").show();
             localStorage.setItem('weddingAdmin', 'true');
         }
         
@@ -788,22 +891,11 @@
         function setGuestRole() {
             userRole = "guest";
             $("#admin-section").hide();
-            $("#admin-login").show();
+            $("#admin-icon").removeClass("admin-active");
             $("#role-badge").hide();
+            $("#admin-logout").hide();
             localStorage.removeItem('weddingAdmin');
         }
-        
-        // Обработчик входа администратора
-        $("#login-admin").click(function() {
-            const password = $("#admin-password").val();
-            if (password === ADMIN_PASSWORD) {
-                setAdminRole();
-                showSuccess("Вы вошли как организатор");
-                $("#admin-password").val("");
-            } else {
-                showError("Неверный пароль");
-            }
-        });
         
         // Тестирование подключения к Firebase
         function testFirebaseConnection() {
@@ -814,11 +906,9 @@
             })
             .then(() => {
                 console.log("Firebase connection test: SUCCESS");
-                showSuccess("Подключение к Firebase успешно!");
             })
             .catch((error) => {
                 console.error("Firebase connection test: FAILED", error);
-                showError("Ошибка подключения к Firebase. Проверьте настройки доступа.");
             });
         }
         
@@ -844,14 +934,12 @@
                     // Преобразуем объект в массив
                     questions = Object.values(data);
                     updateQuestionsCount();
-                    showSuccess("Список вопросов обновлен!");
                 } else {
                     questions = [];
                     updateQuestionsCount();
                 }
             }, (error) => {
                 console.error('Ошибка при загрузке вопросов:', error);
-                showError("Ошибка загрузки вопросов. Проверьте правила доступа Firebase.");
             });
         }
         
@@ -878,7 +966,6 @@
                 })
                 .catch((error) => {
                     console.error('Ошибка при загрузке вопросов:', error);
-                    showError("Ошибка загрузки вопросов. Попробуйте обновить страницу.");
                     $("#sync-indicator").hide();
                 });
         }
@@ -903,7 +990,7 @@
                 .catch((error) => {
                     console.error('Ошибка при сохранении вопроса:', error);
                     $("#sync-indicator").hide();
-                    showError("Ошибка при отправке вопроса. Проверьте правила доступа Firebase.");
+                    showError("Ошибка при отправке вопроса.");
                     return false;
                 });
         }
@@ -940,7 +1027,7 @@
                 .catch((error) => {
                     console.error('Ошибка при удалении вопросов:', error);
                     $("#sync-indicator").hide();
-                    showError("Ошибка при удаления вопросов. Проверьте правила доступа Firebase.");
+                    showError("Ошибка при удаления вопросов.");
                 });
         }
         
@@ -1056,7 +1143,6 @@
             if (!question.anonymous && question.guestId !== null) {
                 authorText = guestNames[question.guestId] + " - " + guestStatuses[question.guestId];
                 // Формируем путь к фото: 1 (2).jpg, 1 (3).jpg и т.д.
-                // Индекс + 2, так как первый гость (невеста) имеет индекс 0, но фото начинаются с 1 (2).jpg
                 photoSrc = "1 (" + (parseInt(question.guestId) + 2) + ").jpg";
             }
             
@@ -1082,135 +1168,6 @@
             $("#question-presentation").hide();
             $("#main-screen").show();
             currentPresentationIndex = -1;
-        });
-        
-        // Обработчик кнопки "Начать отвечать на вопросы"
-        $("#start-answers").click(function() {
-            if (questions.length === 0) {
-                showError("Нет вопросов для ответа!");
-                return;
-            }
-            
-            currentQuestionIndex = 0;
-            showQuestion(questions[currentQuestionIndex]);
-            
-            $("#main-screen").hide();
-            $("#question-container").show();
-            $("#answer-section").show();
-        });
-        
-        // Функция для отображения текущего вопроса
-        function showQuestion(question) {
-            currentQuestion = question;
-            groomAnswer = null;
-            brideAnswer = null;
-            
-            $("#current-question").text(question.question);
-            $("#result-question").text(question.question);
-            
-            let authorText = "Анонимный гость";
-            if (!question.anonymous && question.guestId !== null) {
-                authorText = guestNames[question.guestId] + " - " + guestStatuses[question.guestId];
-            }
-            
-            $("#question-author").text("Вопрос от: " + authorText);
-            $("#result-author").text("Вопрос от: " + authorText);
-            
-            $(".answer-option").removeClass("selected");
-            $("#submit-groom, #submit-bride").prop("disabled", false);
-        }
-        
-        // Обработчики выбора ответов
-        $(".answer-option").click(function() {
-            $(this).siblings().removeClass("selected");
-            $(this).addClass("selected");
-        });
-        
-        $("#submit-groom").click(function() {
-            const selected = $(this).siblings(".answer-options").find(".selected");
-            if (selected.length === 0) {
-                showError("Пожалуйста, выберите ответ");
-                return;
-            }
-            
-            groomAnswer = selected.data("answer");
-            $(this).prop("disabled", true);
-            checkAnswers();
-        });
-        
-        $("#submit-bride").click(function() {
-            const selected = $(this).siblings(".answer-options").find(".selected");
-            if (selected.length === 0) {
-                showError("Пожалуйста, выберите ответ");
-                return;
-            }
-            
-            brideAnswer = selected.data("answer");
-            $(this).prop("disabled", true);
-            checkAnswers();
-        });
-        
-        // Функция для проверки, ответили ли оба
-        function checkAnswers() {
-            if (groomAnswer && brideAnswer) {
-                showResults();
-            }
-        }
-        
-        // Функция для показа результатов
-        function showResults() {
-            $("#groom-answer").text(groomAnswer === "he" ? "ОН" : "ОНА");
-            $("#bride-answer").text(brideAnswer === "he" ? "ОН" : "ОНА");
-            
-            const resultText = groomAnswer === brideAnswer ? "Совпадение! 🎉" : "Разные ответы! 😄";
-            $("#result-text").text(resultText);
-            
-            // Помечаем вопрос как отвеченный в базе данных
-            markQuestionAsAnswered(currentQuestionIndex);
-            
-            $("#question-container").hide();
-            $("#results-container").show();
-            createConfetti();
-        }
-        
-        // Пометить вопрос как отвеченный
-        function markQuestionAsAnswered(index) {
-            if (!navigator.onLine) return;
-            
-            if (questions[index] && questions[index].id) {
-                const questionId = questions[index].id;
-                const questionRef = database.ref('questions').orderByChild('id').equalTo(questionId);
-                
-                questionRef.once('value')
-                    .then((snapshot) => {
-                        snapshot.forEach((childSnapshot) => {
-                            childSnapshot.ref.update({ answered: true });
-                        });
-                    });
-            }
-        }
-        
-        // Обработчик для кнопки "Следующий вопрос"
-        $("#next-question").click(function() {
-            currentQuestionIndex++;
-            
-            if (currentQuestionIndex < questions.length) {
-                showQuestion(questions[currentQuestionIndex]);
-                $("#results-container").hide();
-                $("#question-container").show();
-            } else {
-                $("#results-container").hide();
-                $("#main-screen").show();
-                showSuccess("Вопросы закончились! Спасибо за участие в игре!");
-            }
-        });
-        
-        // Обработчик для кнопки "Завершить ответы"
-        $("#finish-answers").click(function() {
-            $("#results-container").hide();
-            $("#main-screen").show();
-            currentQuestionIndex = -1;
-            updateQuestionsCount();
         });
         
         // Функция для создания конфетти
