@@ -307,19 +307,6 @@
             margin-left: 20px;
         }
         
-        .questions-list {
-            margin-top: 30px;
-            text-align: left;
-        }
-        
-        .question-item {
-            background: #f5f5f5;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 15px;
-            border-left: 4px solid #e91e63;
-        }
-        
         .queue-info {
             background: #e1f5fe;
             padding: 15px;
@@ -340,6 +327,25 @@
             padding: 20px;
             color: #777;
             font-style: italic;
+        }
+        
+        .status-message {
+            margin: 15px 0;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 18px;
+        }
+        
+        .status-waiting {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .status-ready {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
         }
         
         @media (max-width: 768px) {
@@ -388,7 +394,7 @@
 </head>
 <body>
     <div class="container">
-        <div class='main'>
+        <div class='main' id="main-screen">
             <h1>🎎 Он или Она? 🎎</h1>
             <h2>Веселая игра для вашей свадьбы</h2>
             
@@ -396,9 +402,8 @@
                 <h3>Как играть:</h3>
                 <ul>
                     <li>Гости придумывают вопросы, на которые можно ответить "ОН" или "ОНА"</li>
-                    <li>Все вопросы накапливаются в списке</li>
-                    <li>Жених и невеста отвечают на вопросы по очереди</li>
-                    <li>Когда оба ответили, результат показывается всем</li>
+                    <li>Все вопросы накапливаются в общем списке</li>
+                    <li>Когда все вопросы заданы, жених и невеста начинают отвечать</li>
                     <li>Пример вопроса: "Кто чаще моет посуду?"</li>
                 </ul>
             </div>
@@ -428,20 +433,19 @@
             <div class="spinner" id="spinner"></div>
             <div class="error-message" id="error-message"></div>
             
-            <div class="questions-list">
-                <h2>Очередь вопросов:</h2>
-                <div class="queue-info">
-                    В очереди: <span class="queue-number" id="questions-count">0</span> вопросов
-                </div>
-                <div id="questions-container" class="no-questions">
-                    Вопросов пока нет. Будьте первым!
-                </div>
-                <button class="secondary_button" id="start-answers" disabled>Начать отвечать на вопросы</button>
+            <div class="queue-info">
+                Вопросов собрано: <span class="queue-number" id="questions-count">0</span>
             </div>
+            
+            <div class="status-message status-waiting" id="status-message">
+                Ожидаем вопросы от гостей...
+            </div>
+            
+            <button class="secondary_button" id="start-answers" disabled>Начать отвечать на вопросы</button>
         </div>
         
         <div class="main question-container" id="question-container">
-            <h2>Текущий вопрос для жениха и невесты:</h2>
+            <h2>Вопрос для жениха и невесты:</h2>
             <div class="question-text" id="current-question">
                 Здесь будет отображаться вопрос от гостя
             </div>
@@ -497,7 +501,7 @@
     </div>
     
     <script>
-        // Данные о гостях из предыдущего кода
+        // Данные о гостях
         var guestNames = [
             "Анастасия", "Дмитрий", "Наталья", "Григорий", "Виктор",
             "Алексей", "Ольга", "Наталья", "Ольга", "Роман",
@@ -586,7 +590,7 @@
                 // Скрываем спиннер
                 $("#spinner").hide();
                 
-                alert("Ваш вопрос добавлен в очередь! Когда накопится несколько вопросов, жених и невеста начнут на них отвечать.");
+                alert("Ваш вопрос добавлен в общий список! Когда все гости отправят вопросы, жених и невеста начнут на них отвечать.");
             }, 1000);
         });
         
@@ -605,67 +609,35 @@
             questions.push(newQuestion);
             localStorage.setItem('weddingQuestions', JSON.stringify(questions));
             
-            // Обновляем отображение вопросов
-            displayQuestions();
-            
-            // Активируем кнопку начала ответов, если есть вопросы
-            if (questions.length > 0) {
-                $("#start-answers").prop("disabled", false);
-            }
+            // Обновляем отображение количества вопросов
+            updateQuestionsCount();
         }
         
         // Функция для загрузки вопросов
         function loadQuestions() {
-            // Загружаем из локального хранилище (в реальном приложении здесь бы был запрос к серверу)
+            // Загружаем из локального хранилища (в реальном приложении здесь бы был запрос к серверу)
             var storedQuestions = localStorage.getItem('weddingQuestions');
             if (storedQuestions) {
                 questions = JSON.parse(storedQuestions);
-                displayQuestions();
-                
-                // Активируем кнопку начала ответов, если есть вопросы
-                if (questions.length > 0) {
-                    $("#start-answers").prop("disabled", false);
-                }
+                updateQuestionsCount();
             }
         }
         
-        // Функция для отображения списка вопросов
-        function displayQuestions() {
-            var questionsContainer = $("#questions-container");
+        // Функция для обновления счетчика вопросов
+        function updateQuestionsCount() {
             var questionsCount = $("#questions-count");
-            
-            if (questions.length === 0) {
-                questionsContainer.html('<div class="no-questions">Вопросов пока нет. Будьте первым!</div>');
-                questionsCount.text("0");
-                $("#start-answers").prop("disabled", true);
-                return;
-            }
+            var statusMessage = $("#status-message");
             
             questionsCount.text(questions.length);
-            questionsContainer.empty();
             
-            // Показываем вопросы в обратном порядке (новые сверху)
-            for (var i = questions.length - 1; i >= 0; i--) {
-                var question = questions[i];
-                
-                var authorText = "Анонимный гость";
-                if (!question.anonymous && question.guestId !== null) {
-                    authorText = guestNames[question.guestId] + " - " + guestStatuses[question.guestId];
-                }
-                
-                var statusHtml = question.answered ? 
-                    '<span style="color: #4caf50;">✓ Отвечен</span>' : 
-                    '<span style="color: #ff9800;">В очереди</span>';
-                
-                var questionHtml = `
-                    <div class="question-item">
-                        <div class="question-text">${question.question}</div>
-                        <div class="guest-info">Вопрос от: ${authorText}</div>
-                        <div class="guest-info">Время: ${new Date(question.timestamp).toLocaleTimeString()} | ${statusHtml}</div>
-                    </div>
-                `;
-                
-                questionsContainer.append(questionHtml);
+            if (questions.length === 0) {
+                statusMessage.removeClass("status-ready").addClass("status-waiting")
+                    .text("Ожидаем вопросы от гостей...");
+                $("#start-answers").prop("disabled", true);
+            } else {
+                statusMessage.removeClass("status-waiting").addClass("status-ready")
+                    .text("Вопросы получены! Можно начинать отвечать.");
+                $("#start-answers").prop("disabled", false);
             }
         }
         
@@ -681,7 +653,7 @@
             showQuestion(questions[currentQuestionIndex]);
             
             // Скрываем основную панель и показываем панель ответов
-            $(this).closest('.main').hide();
+            $("#main-screen").hide();
             $("#question-container").show();
         });
         
@@ -789,8 +761,13 @@
             } else {
                 // Вопросы закончились
                 $("#results-container").hide();
-                $(".main").show();
-                alert("Вопросы закончились! Ждем новых вопросов от гостей.");
+                $("#main-screen").show();
+                alert("Вопросы закончились! Спасибо за участие в игре!");
+                
+                // Очищаем вопросы после завершения
+                questions = [];
+                localStorage.removeItem('weddingQuestions');
+                updateQuestionsCount();
             }
         });
         
@@ -798,11 +775,11 @@
         $("#finish-answers").click(function() {
             // Возвращаемся к основному экрану
             $("#results-container").hide();
-            $(".main").show();
+            $("#main-screen").show();
             currentQuestionIndex = -1;
             
-            // Обновляем список вопросов
-            displayQuestions();
+            // Обновляем счетчик вопросов
+            updateQuestionsCount();
         });
         
         // Функция для создания конфетти
@@ -835,4 +812,4 @@
         }
     </script>
 </body>
-</html>м
+</html>
