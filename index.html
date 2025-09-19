@@ -3,46 +3,77 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Игра "Он или она" на свадьбе</title>
+    <title>Игра "Он или Она" на свадьбе</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
         body {
-            font-family: Arial, sans-serif;
-            max-width: 1000px;
-            margin: 0 auto;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f9f0ff, #e6f7ff);
+            color: #333;
+            line-height: 1.6;
             padding: 20px;
-            background-color: #f9f9f9;
+            min-height: 100vh;
         }
         
         .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+        
+        header {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            animation: fadeIn 1s ease;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .content {
             display: flex;
             gap: 30px;
+            flex-wrap: wrap;
         }
         
         .question-form {
             flex: 1;
+            min-width: 300px;
             background: white;
             padding: 25px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            animation: slideInLeft 0.8s ease;
         }
         
         .questions-display {
-            flex: 1;
+            flex: 2;
+            min-width: 300px;
             background: white;
             padding: 25px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        
-        h1 {
-            text-align: center;
-            color: #d63384;
-            margin-bottom: 30px;
-        }
-        
-        h2 {
-            color: #6f42c1;
-            margin-top: 0;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            animation: slideInRight 0.8s ease;
         }
         
         .form-group {
@@ -53,157 +84,315 @@
             display: block;
             margin-bottom: 8px;
             font-weight: bold;
+            color: #4a4a4a;
         }
         
-        input[type="text"], select {
+        select, textarea {
             width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
             font-size: 16px;
-            box-sizing: border-box;
+            transition: border-color 0.3s;
+        }
+        
+        select:focus, textarea:focus {
+            border-color: #6a11cb;
+            outline: none;
         }
         
         textarea {
-            width: 100%;
             height: 120px;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 16px;
             resize: vertical;
-            box-sizing: border-box;
+        }
+        
+        .funny-placeholder {
+            font-size: 14px;
+            color: #888;
+            margin-top: 5px;
+            font-style: italic;
         }
         
         button {
-            background-color: #d63384;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
             color: white;
             border: none;
-            padding: 12px 20px;
-            border-radius: 5px;
+            padding: 14px 25px;
+            border-radius: 8px;
             cursor: pointer;
             font-size: 16px;
             font-weight: bold;
             width: 100%;
+            transition: transform 0.3s, box-shadow 0.3s;
+            box-shadow: 0 4px 10px rgba(106, 17, 203, 0.25);
         }
         
         button:hover {
-            background-color: #c22574;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(106, 17, 203, 0.35);
         }
         
         .note {
-            background-color: #fff3cd;
-            border-left: 4px solid #ffc107;
+            background: linear-gradient(135deg, #fff3e0, #ffecb3);
+            border-left: 5px solid #ff9800;
             padding: 15px;
             margin: 20px 0;
-            border-radius: 4px;
+            border-radius: 8px;
+            font-size: 15px;
         }
         
         .question-item {
-            border-left: 4px solid #6f42c1;
-            padding: 15px;
-            margin-bottom: 20px;
-            background-color: #f8f9fa;
-            border-radius: 4px;
+            border-left: 5px solid #6a11cb;
+            padding: 20px;
+            margin-bottom: 25px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+            animation: fadeIn 0.5s ease;
+            transition: transform 0.3s;
+        }
+        
+        .question-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .guest-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .guest-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #6a11cb;
         }
         
         .guest-name {
             font-weight: bold;
-            color: #6f42c1;
+            color: #6a11cb;
+            font-size: 18px;
+        }
+        
+        .guest-status {
+            font-size: 14px;
+            color: #777;
         }
         
         .question-text {
             font-style: italic;
-            margin: 10px 0;
+            margin: 15px 0;
             font-size: 18px;
+            color: #333;
+            line-height: 1.5;
         }
         
         .answer-section {
             margin-top: 15px;
             padding-top: 15px;
-            border-top: 1px dashed #ddd;
+            border-top: 2px dashed #ddd;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
         }
         
         .answer-btn {
-            background-color: #6f42c1;
-            padding: 8px 15px;
-            font-size: 14px;
+            background: linear-gradient(135deg, #ff6b6b, #ff8e8e);
+            padding: 10px 20px;
+            font-size: 16px;
             width: auto;
-            margin-right: 10px;
+            border-radius: 30px;
+        }
+        
+        .answer-btn.she {
+            background: linear-gradient(135deg, #ff6b9d, #ff8eb4);
         }
         
         .answer-text {
             margin-top: 10px;
             font-weight: bold;
             color: #198754;
+            font-size: 18px;
+            padding: 10px;
+            background: #e8f5e9;
+            border-radius: 8px;
+            text-align: center;
+            animation: popIn 0.5s ease;
         }
         
-        .hidden {
-            display: none;
+        .timestamp {
+            font-size: 14px;
+            color: #888;
+            text-align: right;
+            margin-top: 10px;
+        }
+        
+        .heart {
+            color: #ff6b6b;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideInLeft {
+            from { transform: translateX(-30px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes slideInRight {
+            from { transform: translateX(30px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background-color: #f00;
+            opacity: 0.7;
+            border-radius: 0;
+            animation: fall linear forwards;
+            z-index: 1000;
+        }
+        
+        @keyframes fall {
+            to {
+                transform: translateY(100vh) rotate(720deg);
+                opacity: 0;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .content {
+                flex-direction: column;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
         }
     </style>
 </head>
 <body>
-    <h1>Игра "Он или она" на свадьбе</h1>
-    
-    <div class="note">
-        <p>💡 Задайте вопрос о женихе и невесте, на который можно ответить "ОН" или "ОНА". Например: "Кто чаще забывает выключить свет?", "Кто просыпается первым?" или "Кто лучше готовит?"</p>
-    </div>
-    
     <div class="container">
-        <div class="question-form">
-            <h2>Задать вопрос</h2>
-            <form id="questionForm">
-                <div class="form-group">
-                    <label for="guestName">Ваше имя:</label>
-                    <input type="text" id="guestName" required placeholder="Как вас зовут?">
-                </div>
-                
-                <div class="form-group">
-                    <label for="questionText">Ваш вопрос (кто из них...):</label>
-                    <textarea id="questionText" required placeholder="Например: Кто обычно моет посуду? Кто первым признался в любви? Кто дольше собирается?"></textarea>
-                </div>
-                
-                <button type="submit">Отправить вопрос</button>
-            </form>
-        </div>
+        <header>
+            <h1>Игра "Он или Она" <span class="heart">❤</span></h1>
+            <p class="subtitle">Кто из молодоженов? Ваши вопросы и их ответы!</p>
+        </header>
         
-        <div class="questions-display">
-            <h2>Вопросы от гостей</h2>
-            <div id="questionsContainer">
-                <!-- Вопросы будут отображаться здесь -->
-                <p id="noQuestions">Пока нет вопросов. Будьте первым!</p>
+        <div class="content">
+            <div class="question-form">
+                <h2><i class="fas fa-question-circle"></i> Задайте вопрос</h2>
+                
+                <div class="note">
+                    <p><i class="fas fa-lightbulb"></i> <strong>Идея игры:</strong> Задайте вопрос о молодоженах, на который можно ответить "ОН" или "ОНА". Например: "Кто чаще забывает выключить свет?" или "Кто первым признался в любви?"</p>
+                </div>
+                
+                <form id="questionForm">
+                    <div class="form-group">
+                        <label for="guestSelect">Выберите себя из списка гостей:</label>
+                        <select id="guestSelect" required>
+                            <option value="">-- Выберите ваше имя --</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="questionText">Ваш вопрос (кто из них...):</label>
+                        <textarea id="questionText" required placeholder="Например: Кто обычно моет посуду? Кто первым признался в любви? Кто дольше собирается?"></textarea>
+                        <p class="funny-placeholder">💡 Можно спросить о чем-то забавном: "Кто храпит громче?" или "Кто вечно опаздывает?"</p>
+                    </div>
+                    
+                    <button type="submit"><i class="fas fa-paper-plane"></i> Отправить вопрос</button>
+                </form>
+            </div>
+            
+            <div class="questions-display">
+                <h2><i class="fas fa-comments"></i> Вопросы от гостей</h2>
+                <div id="questionsContainer">
+                    <p id="noQuestions">Пока нет вопросов. Будьте первым!</p>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
+        // Данные гостей из вашей системы
+        const guestData = [
+            { id: 1, name: "Анна", status: "Гость", avatar: "♀️" },
+            { id: 2, name: "Иван", status: "Гость", avatar: "♂️" },
+            { id: 3, name: "Мария", status: "Невеста 👰", avatar: "👰" },
+            { id: 4, name: "Петр", status: "Жених 🤵", avatar: "🤵" },
+            { id: 5, name: "Ольга", status: "Гость", avatar: "♀️" }
+        ];
+
         // Хранилище вопросов
         let questions = JSON.parse(localStorage.getItem('weddingHeSheQuestions')) || [];
         
         // Инициализация
         function init() {
+            populateGuestSelect();
             displayQuestions();
             
             // Обработка отправки формы
             document.getElementById('questionForm').addEventListener('submit', function(e) {
                 e.preventDefault();
                 
-                const guestName = document.getElementById('guestName').value.trim();
+                const guestId = document.getElementById('guestSelect').value;
                 const questionText = document.getElementById('questionText').value.trim();
                 
-                if (guestName && questionText) {
-                    addQuestion(guestName, questionText);
+                if (guestId && questionText) {
+                    addQuestion(guestId, questionText);
                     this.reset();
+                    createConfetti(20);
                 }
             });
         }
         
+        // Заполнение выпадающего списка гостями
+        function populateGuestSelect() {
+            const select = document.getElementById('guestSelect');
+            
+            // Фильтруем гостей, исключая жениха и невесту
+            const filteredGuests = guestData.filter(guest => 
+                guest.status !== "Невеста 👰" && guest.status !== "Жених 🤵"
+            );
+            
+            filteredGuests.forEach(guest => {
+                const option = document.createElement('option');
+                option.value = guest.id;
+                option.textContent = `${guest.name} (${guest.status})`;
+                select.appendChild(option);
+            });
+        }
+        
         // Добавление нового вопроса
-        function addQuestion(guestName, questionText) {
+        function addQuestion(guestId, questionText) {
+            const guest = guestData.find(g => g.id == guestId);
+            
             const newQuestion = {
                 id: Date.now(),
-                guestName: guestName,
+                guestId: guest.id,
+                guestName: guest.name,
+                guestStatus: guest.status,
+                guestAvatar: guest.avatar,
                 question: questionText,
                 answer: null,
                 timestamp: new Date().toLocaleString('ru-RU')
@@ -233,19 +422,31 @@
             let questionsHTML = '';
             
             questions.forEach(q => {
+                const guest = guestData.find(g => g.id == q.guestId);
+                
                 questionsHTML += `
                     <div class="question-item">
-                        <div class="guest-name">${q.guestName}</div>
+                        <div class="guest-info">
+                            <div class="guest-avatar" style="background: #e0e0ff; display: flex; align-items: center; justify-content: center; font-size: 24px;">
+                                ${guest?.avatar || '👤'}
+                            </div>
+                            <div>
+                                <div class="guest-name">${q.guestName}</div>
+                                <div class="guest-status">${q.guestStatus}</div>
+                            </div>
+                        </div>
+                        
                         <div class="question-text">"${q.question}"</div>
-                        <div class="timestamp"><small>${q.timestamp}</small></div>
                         
                         <div class="answer-section">
                             ${q.answer ? 
-                                `<div class="answer-text">Ответ: ${q.answer}</div>` : 
-                                `<button class="answer-btn" onclick="answerQuestion(${q.id}, 'ОН')">Ответ: ОН</button>
-                                 <button class="answer-btn" onclick="answerQuestion(${q.id}, 'ОНА')">Ответ: ОНА</button>`
+                                `<div class="answer-text">Ответ молодоженов: ${q.answer}</div>` : 
+                                `<button class="answer-btn" onclick="answerQuestion(${q.id}, 'ОН')"><i class="fas fa-male"></i> ОН</button>
+                                 <button class="answer-btn she" onclick="answerQuestion(${q.id}, 'ОНА')"><i class="fas fa-female"></i> ОНА</button>`
                             }
                         </div>
+                        
+                        <div class="timestamp"><i class="far fa-clock"></i> ${q.timestamp}</div>
                     </div>
                 `;
             });
@@ -263,6 +464,30 @@
                 question.answer = answer;
                 saveQuestions();
                 displayQuestions();
+                createConfetti(15);
+            }
+        }
+        
+        // Создание конфетти-эффекта
+        function createConfetti(count) {
+            const colors = ['#ff6b6b', '#6a11cb', '#2575fc', '#ff8e8e', '#6a11cb', '#4cd964', '#ffcc00'];
+            
+            for (let i = 0; i < count; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = Math.random() * 100 + 'vw';
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.width = (5 + Math.random() * 10) + 'px';
+                confetti.style.height = (5 + Math.random() * 10) + 'px';
+                confetti.style.animationDuration = (1 + Math.random() * 3) + 's';
+                confetti.style.animationDelay = (Math.random() * 0.5) + 's';
+                
+                document.body.appendChild(confetti);
+                
+                // Удаляем элемент после завершения анимации
+                setTimeout(() => {
+                    confetti.remove();
+                }, 4000);
             }
         }
         
