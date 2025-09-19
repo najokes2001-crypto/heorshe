@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Игра "Он или она" на свадьбе</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        
+        .container {
+            display: flex;
+            gap: 30px;
+        }
+        
+        .question-form {
+            flex: 1;
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .questions-display {
+            flex: 1;
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #d63384;
+            margin-bottom: 30px;
+        }
+        
+        h2 {
+            color: #6f42c1;
+            margin-top: 0;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        
+        input[type="text"], select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        
+        textarea {
+            width: 100%;
+            height: 120px;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            resize: vertical;
+            box-sizing: border-box;
+        }
+        
+        button {
+            background-color: #d63384;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            width: 100%;
+        }
+        
+        button:hover {
+            background-color: #c22574;
+        }
+        
+        .note {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .question-item {
+            border-left: 4px solid #6f42c1;
+            padding: 15px;
+            margin-bottom: 20px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        
+        .guest-name {
+            font-weight: bold;
+            color: #6f42c1;
+        }
+        
+        .question-text {
+            font-style: italic;
+            margin: 10px 0;
+            font-size: 18px;
+        }
+        
+        .answer-section {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px dashed #ddd;
+        }
+        
+        .answer-btn {
+            background-color: #6f42c1;
+            padding: 8px 15px;
+            font-size: 14px;
+            width: auto;
+            margin-right: 10px;
+        }
+        
+        .answer-text {
+            margin-top: 10px;
+            font-weight: bold;
+            color: #198754;
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Игра "Он или она" на свадьбе</h1>
+    
+    <div class="note">
+        <p>💡 Задайте вопрос о женихе и невесте, на который можно ответить "ОН" или "ОНА". Например: "Кто чаще забывает выключить свет?", "Кто просыпается первым?" или "Кто лучше готовит?"</p>
+    </div>
+    
+    <div class="container">
+        <div class="question-form">
+            <h2>Задать вопрос</h2>
+            <form id="questionForm">
+                <div class="form-group">
+                    <label for="guestName">Ваше имя:</label>
+                    <input type="text" id="guestName" required placeholder="Как вас зовут?">
+                </div>
+                
+                <div class="form-group">
+                    <label for="questionText">Ваш вопрос (кто из них...):</label>
+                    <textarea id="questionText" required placeholder="Например: Кто обычно моет посуду? Кто первым признался в любви? Кто дольше собирается?"></textarea>
+                </div>
+                
+                <button type="submit">Отправить вопрос</button>
+            </form>
+        </div>
+        
+        <div class="questions-display">
+            <h2>Вопросы от гостей</h2>
+            <div id="questionsContainer">
+                <!-- Вопросы будут отображаться здесь -->
+                <p id="noQuestions">Пока нет вопросов. Будьте первым!</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Хранилище вопросов
+        let questions = JSON.parse(localStorage.getItem('weddingHeSheQuestions')) || [];
+        
+        // Инициализация
+        function init() {
+            displayQuestions();
+            
+            // Обработка отправки формы
+            document.getElementById('questionForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const guestName = document.getElementById('guestName').value.trim();
+                const questionText = document.getElementById('questionText').value.trim();
+                
+                if (guestName && questionText) {
+                    addQuestion(guestName, questionText);
+                    this.reset();
+                }
+            });
+        }
+        
+        // Добавление нового вопроса
+        function addQuestion(guestName, questionText) {
+            const newQuestion = {
+                id: Date.now(),
+                guestName: guestName,
+                question: questionText,
+                answer: null,
+                timestamp: new Date().toLocaleString('ru-RU')
+            };
+            
+            questions.unshift(newQuestion);
+            saveQuestions();
+            displayQuestions();
+        }
+        
+        // Сохранение вопросов в localStorage
+        function saveQuestions() {
+            localStorage.setItem('weddingHeSheQuestions', JSON.stringify(questions));
+        }
+        
+        // Отображение вопросов
+        function displayQuestions() {
+            const container = document.getElementById('questionsContainer');
+            
+            if (questions.length === 0) {
+                container.innerHTML = '<p id="noQuestions">Пока нет вопросов. Будьте первым!</p>';
+                return;
+            }
+            
+            document.getElementById('noQuestions')?.remove();
+            
+            let questionsHTML = '';
+            
+            questions.forEach(q => {
+                questionsHTML += `
+                    <div class="question-item">
+                        <div class="guest-name">${q.guestName}</div>
+                        <div class="question-text">"${q.question}"</div>
+                        <div class="timestamp"><small>${q.timestamp}</small></div>
+                        
+                        <div class="answer-section">
+                            ${q.answer ? 
+                                `<div class="answer-text">Ответ: ${q.answer}</div>` : 
+                                `<button class="answer-btn" onclick="answerQuestion(${q.id}, 'ОН')">Ответ: ОН</button>
+                                 <button class="answer-btn" onclick="answerQuestion(${q.id}, 'ОНА')">Ответ: ОНА</button>`
+                            }
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = questionsHTML;
+        }
+        
+        // Ответ на вопрос (функция для организаторов)
+        function answerQuestion(questionId, answer) {
+            // В реальном сценарии здесь должна быть проверка прав доступа
+            // что отвечают именно жених или невеста
+            
+            const question = questions.find(q => q.id === questionId);
+            if (question) {
+                question.answer = answer;
+                saveQuestions();
+                displayQuestions();
+            }
+        }
+        
+        // Инициализация при загрузке
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
