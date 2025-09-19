@@ -244,6 +244,7 @@
         .highlight {
             font-weight: bold;
             color: #e91e63;
+            font-size: 22px;
         }
         
         .guest-info {
@@ -293,6 +294,21 @@
             font-size: 18px;
             margin-top: 10px;
             display: none;
+            background: #ffebee;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ffcdd2;
+        }
+        
+        .success-message {
+            color: #2e7d32;
+            font-size: 18px;
+            margin-top: 10px;
+            display: none;
+            background: #e8f5e9;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #c8e6c9;
         }
         
         .instructions {
@@ -334,6 +350,7 @@
             padding: 10px;
             border-radius: 10px;
             font-size: 18px;
+            text-align: center;
         }
         
         .status-waiting {
@@ -348,16 +365,28 @@
             border: 1px solid #c3e6cb;
         }
         
+        .status-offline {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
         .sync-indicator {
             position: fixed;
             top: 10px;
             right: 10px;
             background: #4caf50;
             color: white;
-            padding: 5px 10px;
-            border-radius: 15px;
+            padding: 8px 15px;
+            border-radius: 20px;
             font-size: 14px;
             display: none;
+            z-index: 1000;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        .sync-offline {
+            background: #f44336;
         }
         
         @media (max-width: 768px) {
@@ -400,6 +429,13 @@
             .answer-options {
                 flex-direction: column;
                 gap: 10px;
+            }
+            
+            .sync-indicator {
+                top: 5px;
+                right: 5px;
+                font-size: 12px;
+                padding: 5px 10px;
             }
         }
     </style>
@@ -446,6 +482,7 @@
             
             <div class="spinner" id="spinner"></div>
             <div class="error-message" id="error-message"></div>
+            <div class="success-message" id="success-message"></div>
             
             <div class="queue-info">
                 Вопросов собрано: <span class="queue-number" id="questions-count">0</span>
@@ -457,6 +494,7 @@
             
             <button class="secondary_button" id="start-answers" disabled>Начать отвечать на вопросы</button>
             <button class="secondary_button" id="refresh-questions">🔄 Обновить список</button>
+            <button class="secondary_button" id="clear-questions">🗑️ Очистить все вопросы</button>
         </div>
         
         <div class="main question-container" id="question-container">
@@ -540,21 +578,18 @@
         // Массив для хранения вопросов
         let questions = [];
         let currentQuestionIndex = -1;
+        let isOnline = true;
         
         // Текущий вопрос и ответы
         let currentQuestion = null;
         let groomAnswer = null;
         let brideAnswer = null;
         
-        // URL API на Glitch
-        const API_URL = 'https://wedding-game-api.glitch.me';
-        
         // Заполняем выпадающий список гостей
         $(document).ready(function() {
             const guestSelect = $("#guest-select");
             
             for (let i = 0; i < guestNames.length; i++) {
-                // Пропускаем жениха и невесту, так как они отвечают, а не задают вопросы
                 if (guestStatuses[i] === "Жених 🤵" || guestStatuses[i] === "Невеста 👰") {
                     continue;
                 }
@@ -565,67 +600,101 @@
             // Загружаем вопросы при загрузке страницы
             loadQuestions();
             
-            // Обновление вопросов каждые 3 секунды
-            setInterval(loadQuestions, 3000);
+            // Проверяем онлайн-статус
+            checkOnlineStatus();
+            
+            // Обновление вопросов каждые 5 секунд
+            setInterval(loadQuestions, 5000);
+            
+            // Проверка соединения каждые 10 секунд
+            setInterval(checkOnlineStatus, 10000);
         });
         
-        // Функция для загрузки вопросов с сервера
+        // Проверка онлайн-статуса
+        function checkOnlineStatus() {
+            isOnline = navigator.onLine;
+            updateOnlineStatus();
+        }
+        
+        // Обновление отображения онлайн-статуса
+        function updateOnlineStatus() {
+            const syncIndicator = $("#sync-indicator");
+            const statusMessage = $("#status-message");
+            
+            if (isOnline) {
+                syncIndicator.removeClass("sync-offline").text("🔄 Онлайн");
+                setTimeout(() => syncIndicator.hide(), 2000);
+            } else {
+                syncIndicator.addClass("sync-offline").text("⚠️ Офлайн").show();
+                statusMessage.removeClass("status-waiting status-ready")
+                    .addClass("status-offline")
+                    .html("Нет соединения с сервером. Работаем в офлайн-режиме. <br>Вопросы будут сохранены локально.");
+            }
+        }
+        
+        // Функция для загрузки вопросов
         async function loadQuestions() {
-            $("#sync-indicator").show();
+            if (!isOnline) {
+                // В офлайн-режиме используем localStorage
+                const localQuestions = localStorage.getItem('weddingQuestions');
+                if (localQuestions) {
+                    questions = JSON.parse(localQuestions);
+                    updateQuestionsCount();
+                }
+                return;
+            }
+            
+            $("#sync-indicator").show().text("🔄 Загрузка...");
             
             try {
-                const response = await fetch(`${API_URL}/questions`);
-                
-                if (response.ok) {
-                    questions = await response.json();
-                    updateQuestionsCount();
-                } else {
-                    console.error('Ошибка загрузки вопросов:', response.status);
-                    showError("Ошибка загрузки вопросов. Попробуйте обновить страницу.");
+                // Пытаемся получить вопросы из localStorage сначала
+                const localQuestions = localStorage.getItem('weddingQuestions');
+                if (localQuestions) {
+                    questions = JSON.parse(localQuestions);
                 }
+                
+                updateQuestionsCount();
+                
             } catch (error) {
                 console.error('Ошибка при загрузке вопросов:', error);
-                showError("Нет соединения с сервером. Попробуйте позже.");
+                showError("Ошибка загрузки вопросов. Используется локальное хранилище.");
             } finally {
                 $("#sync-indicator").hide();
             }
         }
         
-        // Функция для отправки вопроса на сервер
-        async function saveQuestionToServer(question) {
-            $("#sync-indicator").show();
-            
+        // Функция для сохранения вопросов
+        function saveQuestions() {
             try {
-                const response = await fetch(`${API_URL}/questions`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(question)
-                });
+                localStorage.setItem('weddingQuestions', JSON.stringify(questions));
                 
-                if (!response.ok) {
-                    throw new Error('Ошибка сохранения вопроса');
+                if (isOnline) {
+                    $("#sync-indicator").show().text("💾 Сохранено").delay(1000).fadeOut();
                 }
-                
-                // После успешного сохранения обновляем список вопросов
-                await loadQuestions();
-                
             } catch (error) {
-                console.error('Ошибка при сохранении вопроса:', error);
-                throw error;
-            } finally {
-                $("#sync-indicator").hide();
+                console.error('Ошибка при сохранении вопросов:', error);
+                showError("Ошибка сохранения вопросов.");
             }
         }
         
         // Обработчик кнопки "Обновить список вопросов"
         $("#refresh-questions").click(function() {
             loadQuestions();
+            showSuccess("Список вопросов обновлен!");
+        });
+        
+        // Обработчик кнопки "Очистить все вопросы"
+        $("#clear-questions").click(function() {
+            if (confirm("Вы уверены, что хотите удалить все вопросы? Это действие нельзя отменить.")) {
+                questions = [];
+                saveQuestions();
+                updateQuestionsCount();
+                showSuccess("Все вопросы удалены!");
+            }
         });
         
         // Функция для отправки вопроса
-        $("#submit-question").click(async function() {
+        $("#submit-question").click(function() {
             const guestId = $("#guest-select").val();
             const anonymous = $("#anonymous").is(":checked");
             const questionText = $("#question-text").val().trim();
@@ -641,19 +710,17 @@
                 return;
             }
             
-            // Проверяем, что вопрос предполагает ответ "он" или "она"
             if (!questionText.toLowerCase().includes("кто")) {
                 showError("Вопрос должен предполагать ответ 'ОН' или 'ОНА', например: 'Кто чаще моет посуду?'");
                 return;
             }
             
-            // Показываем спиннер
             $("#spinner").show();
             
             try {
                 // Создаем объект вопроса
                 const newQuestion = {
-                    id: Date.now(), // уникальный ID на основе времени
+                    id: Date.now(),
                     guestId: guestId,
                     anonymous: anonymous,
                     question: questionText,
@@ -661,20 +728,23 @@
                     answered: false
                 };
                 
-                // Сохраняем вопрос на сервер
-                await saveQuestionToServer(newQuestion);
+                // Добавляем вопрос в массив
+                questions.push(newQuestion);
+                
+                // Сохраняем вопросы
+                saveQuestions();
                 
                 // Очищаем форму
                 $("#guest-select").val("");
                 $("#anonymous").prop("checked", false);
                 $("#question-text").val("");
                 
-                alert("Ваш вопрос добавлен в общий список! Когда все гости отправят вопросы, жених и невеста начнут на них отвечать.");
+                // Показываем сообщение об успехе
+                showSuccess("Ваш вопрос добавлен! Вопросов: " + questions.length);
                 
             } catch (error) {
                 showError("Ошибка при отправке вопроса. Попробуйте еще раз.");
             } finally {
-                // Скрываем спиннер
                 $("#spinner").hide();
             }
         });
@@ -687,46 +757,54 @@
             questionsCount.text(questions.length);
             
             if (questions.length === 0) {
-                statusMessage.removeClass("status-ready").addClass("status-waiting")
-                    .text("Ожидаем вопросы от гостей...");
+                statusMessage.removeClass("status-ready status-offline").addClass("status-waiting")
+                    .html("Ожидаем вопросы от гостей..." + (isOnline ? "" : "<br><small>Работаем в офлайн-режиме</small>"));
                 $("#start-answers").prop("disabled", true);
             } else {
-                statusMessage.removeClass("status-waiting").addClass("status-ready")
-                    .text("Вопросы получены! Можно начинать отвечать.");
+                statusMessage.removeClass("status-waiting status-offline").addClass("status-ready")
+                    .html("Вопросы получены! Можно начинать отвечать." + (isOnline ? "" : "<br><small>Работаем в офлайн-режиме</small>"));
                 $("#start-answers").prop("disabled", false);
             }
+        }
+        
+        // Показ сообщения об ошибке
+        function showError(message) {
+            $("#error-message").html(message).show();
+            $("#success-message").hide();
+            setTimeout(() => $("#error-message").fadeOut(), 5000);
+        }
+        
+        // Показ сообщения об успехе
+        function showSuccess(message) {
+            $("#success-message").html(message).show();
+            $("#error-message").hide();
+            setTimeout(() => $("#success-message").fadeOut(), 3000);
         }
         
         // Обработчик кнопки "Начать отвечать на вопросы"
         $("#start-answers").click(function() {
             if (questions.length === 0) {
-                alert("Нет вопросов для ответа!");
+                showError("Нет вопросов для ответа!");
                 return;
             }
             
-            // Начинаем с первого вопроса
             currentQuestionIndex = 0;
             showQuestion(questions[currentQuestionIndex]);
             
-            // Скрываем основную панель и показываем панель ответов
             $("#main-screen").hide();
             $("#question-container").show();
             $("#answer-section").show();
         });
         
-        // Функция для отображения текущего вопроса для жениха и невесты
+        // Функция для отображения текущего вопроса
         function showQuestion(question) {
             currentQuestion = question;
-            
-            // Сбрасываем ответы
             groomAnswer = null;
             brideAnswer = null;
             
-            // Устанавливаем текст вопроса
             $("#current-question").text(question.question);
             $("#result-question").text(question.question);
             
-            // Устанавливаем автора вопроса
             let authorText = "Анонимный гость";
             if (!question.anonymous && question.guestId !== null) {
                 authorText = guestNames[question.guestId] + " - " + guestStatuses[question.guestId];
@@ -735,26 +813,20 @@
             $("#question-author").text("Вопрос от: " + authorText);
             $("#result-author").text("Вопрос от: " + authorText);
             
-            // Сбрасываем выбор ответов
             $(".answer-option").removeClass("selected");
-            
-            // Включаем кнопки ответов
             $("#submit-groom, #submit-bride").prop("disabled", false);
         }
         
         // Обработчики выбора ответов
         $(".answer-option").click(function() {
-            // Сбрасываем предыдущий выбор в этой группе
             $(this).siblings().removeClass("selected");
-            // Выделяем выбранный вариант
             $(this).addClass("selected");
         });
         
-        // Обработчики подтверждения ответов
         $("#submit-groom").click(function() {
             const selected = $(this).siblings(".answer-options").find(".selected");
             if (selected.length === 0) {
-                alert("Пожалуйста, выберите ответ");
+                showError("Пожалуйста, выберите ответ");
                 return;
             }
             
@@ -766,7 +838,7 @@
         $("#submit-bride").click(function() {
             const selected = $(this).siblings(".answer-options").find(".selected");
             if (selected.length === 0) {
-                alert("Пожалуйста, выберите ответ");
+                showError("Пожалуйста, выберите ответ");
                 return;
             }
             
@@ -778,58 +850,46 @@
         // Функция для проверки, ответили ли оба
         function checkAnswers() {
             if (groomAnswer && brideAnswer) {
-                // Оба ответили, показываем результаты
                 showResults();
             }
         }
         
         // Функция для показа результатов
         function showResults() {
-            // Устанавливаем ответы
             $("#groom-answer").text(groomAnswer === "he" ? "ОН" : "ОНА");
             $("#bride-answer").text(brideAnswer === "he" ? "ОН" : "ОНА");
             
-            // Определяем результат
-            const resultText = groomAnswer === brideAnswer ? "Совпадение!" : "Разные ответы!";
+            const resultText = groomAnswer === brideAnswer ? "Совпадение! 🎉" : "Разные ответы! 😄";
             $("#result-text").text(resultText);
             
-            // Помечаем вопрос как отвеченный (локально)
             questions[currentQuestionIndex].answered = true;
+            saveQuestions();
             
-            // Показываем контейнер с результатами
             $("#question-container").hide();
             $("#results-container").show();
-            
-            // Создаем конфетти для праздничного эффекта
             createConfetti();
         }
         
         // Обработчик для кнопки "Следующий вопрос"
         $("#next-question").click(function() {
-            // Переходим к следующему вопросу
             currentQuestionIndex++;
             
             if (currentQuestionIndex < questions.length) {
-                // Показываем следующий вопрос
                 showQuestion(questions[currentQuestionIndex]);
                 $("#results-container").hide();
                 $("#question-container").show();
             } else {
-                // Вопросы закончились
                 $("#results-container").hide();
                 $("#main-screen").show();
-                alert("Вопросы закончились! Спасибо за участие в игре!");
+                showSuccess("Вопросы закончились! Спасибо за участие в игре!");
             }
         });
         
         // Обработчик для кнопки "Завершить ответы"
         $("#finish-answers").click(function() {
-            // Возвращаемся к основному экрану
             $("#results-container").hide();
             $("#main-screen").show();
             currentQuestionIndex = -1;
-            
-            // Обновляем счетчик вопросов
             updateQuestionsCount();
         });
         
@@ -838,7 +898,7 @@
             const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
             const container = $('.container');
             
-            for (let i = 0; i < 30; i++) {
+            for (let i = 0; i < 20; i++) {
                 const confetti = $('<div class="confetti"></div>');
                 confetti.css({
                     left: Math.random() * 100 + '%',
@@ -848,19 +908,23 @@
                 
                 container.append(confetti);
                 
-                setTimeout(() => {
-                    confetti.remove();
-                }, 5000);
+                setTimeout(() => confetti.remove(), 5000);
             }
         }
         
-        // Функция для отображения ошибки
-        function showError(message) {
-            $("#error-message").text(message).show();
-            setTimeout(function() {
-                $("#error-message").hide();
-            }, 5000);
-        }
+        // Обработчики онлайн/офлайн статуса
+        window.addEventListener('online', () => {
+            isOnline = true;
+            updateOnlineStatus();
+            showSuccess("Соединение восстановлено!");
+            loadQuestions();
+        });
+        
+        window.addEventListener('offline', () => {
+            isOnline = false;
+            updateOnlineStatus();
+            showError("Нет соединения с интернетом. Работаем офлайн.");
+        });
     </script>
 </body>
 </html>
