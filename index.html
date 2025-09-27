@@ -425,16 +425,6 @@
             display: none;
         }
         
-        .guest-photo {
-            width: 150px;
-            height: 150px;
-            object-fit: cover;
-            border-radius: 50%;
-            border: 4px solid #e91e63;
-            margin: 15px auto;
-            display: block;
-        }
-        
         .question-presentation {
             display: none;
             margin-top: 30px;
@@ -553,11 +543,6 @@
                 top: 50px;
             }
             
-            .guest-photo {
-                width: 120px;
-                height: 120px;
-            }
-            
             .admin-panel {
                 top: 10px;
                 right: 10px;
@@ -590,11 +575,6 @@
             .answer-options {
                 flex-direction: column;
                 gap: 10px;
-            }
-            
-            .guest-photo {
-                width: 100px;
-                height: 100px;
             }
             
             .admin-login-popup {
@@ -683,8 +663,6 @@
         
         <div class="main question-presentation" id="question-presentation">
             <h2>Вопрос для Насти и Димы:</h2>
-            
-            <img class="guest-photo" id="guest-photo" src="" alt="Фото гостя">
             
             <div class="question-text" id="presentation-question">
                 Здесь будет отображаться вопрос от гостя
@@ -1138,16 +1116,12 @@
             $("#presentation-question").text(question.question);
             
             let authorText = "Анонимный гость";
-            let photoSrc = "anonymous.jpg"; // Заглушка для анонимных вопросов
             
             if (!question.anonymous && question.guestId !== null) {
                 authorText = guestNames[question.guestId] + " - " + guestStatuses[question.guestId];
-                // Формируем путь к фото: 1 (2).jpg, 1 (3).jpg и т.д.
-                photoSrc = "1 (" + (parseInt(question.guestId) + 2) + ").jpg";
             }
             
             $("#presentation-author").text("Вопрос от: " + authorText);
-            $("#guest-photo").attr("src", photoSrc).attr("alt", authorText);
         }
         
         // Обработчик кнопки "Следующий вопрос" в режиме презентации
